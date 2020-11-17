@@ -98,7 +98,7 @@ jobs:
           if("${{ matrix.architecture }}" -eq "x86") { $flag = "--x86" } else { $flag = "" };
           choco install --no-progress "$flag" cmake.portable nuget.commandline openssl; mkdir build
       - name: Install Java
-        uses: emgre/setup-java@master
+        uses: actions/setup-java@v1
         with:
           java-version: 8
           java-package: jdk

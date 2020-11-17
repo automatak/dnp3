@@ -224,3 +224,44 @@ TEST_CASE(SUITE("KeepAliveSuccessCallbackIsInvokedWhenLinkStatusReceivedBeforeTr
     REQUIRE(t.listener->numKeepAliveReplys == 1);
     REQUIRE(t.exe->num_pending_timers() == 1);
 }
+
+TEST_CASE(SUITE("KeepAliveTimerRestartsWhenFrameIsReceived"))
+{
+    LinkConfig config(true, false);
+    config.KeepAliveTimeout = TimeDuration::Seconds(5);
+    LinkLayerTest t(config);
+
+    t.link.OnLowerLayerUp();
+
+    REQUIRE(t.exe->num_pending_timers() == 1);
+    REQUIRE(t.listener->numKeepAliveTransmissions == 0);
+
+    t.exe->advance_time(std::chrono::seconds(2));
+    t.OnFrame(LinkFunction::SEC_ACK, false, false, false, 1, 1024); // Some activity on the link
+
+    t.exe->advance_time(std::chrono::seconds(3)); // The original timer should now expire
+    REQUIRE(t.exe->run_many() > 0);
+    REQUIRE(t.PopLastWriteAsHex() == ""); // Nothing sent
+
+    t.exe->advance_time(std::chrono::seconds(2)); // The keep-alive should now be sent
+    REQUIRE(t.exe->run_many() > 0);
+    REQUIRE(t.PopLastWriteAsHex() == LinkHex::RequestLinkStatus(true, 1024, 1));
+}
+
+TEST_CASE(SUITE("KeepAliveDisabled"))
+{
+    LinkConfig config(true, false);
+    config.KeepAliveTimeout = TimeDuration::Max();
+    LinkLayerTest t(config);
+
+    t.link.OnLowerLayerUp();
+
+    REQUIRE(t.exe->num_pending_timers() == 1);
+    REQUIRE(t.listener->numKeepAliveTransmissions == 0);
+
+    t.exe->advance_time(std::chrono::seconds(10));
+    t.OnFrame(LinkFunction::SEC_ACK, false, false, false, 1, 1024);
+
+    t.exe->advance_time(std::chrono::hours(24));
+    REQUIRE(t.exe->run_many() == 0);
+}

@@ -135,6 +135,9 @@ public:
     const std::shared_ptr<IUpperLayer> upper;
 
     ILinkSession* pSession;
+
+private:
+    std::shared_ptr<void> lifetimeGuard = std::make_shared<char>();
 };
 
 } // namespace opendnp3
