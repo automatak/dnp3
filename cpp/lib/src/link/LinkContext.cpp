@@ -50,6 +50,14 @@ LinkContext::LinkContext(const Logger& logger,
 {
 }
 
+LinkContext::~LinkContext()
+{
+    std::weak_ptr<void> weak_tracker = timer_tracker;
+    timer_tracker.reset();
+    if(!weak_tracker.expired())
+	  executor->block_until_and_flush([](){});
+}
+
 bool LinkContext::OnLowerLayerUp()
 {
     if (this->isOnline)
@@ -253,12 +261,20 @@ void LinkContext::OnResponseTimeout()
 
 void LinkContext::StartResponseTimer()
 {
-    rspTimeoutTimer = executor->start(config.Timeout.value, [this]() { this->OnResponseTimeout(); });
+    this->rspTimeoutTimer = executor->start(config.Timeout.value, [this,t{timer_tracker}]()
+	  {
+		if(isOnline)
+		    this->OnResponseTimeout();
+	  });
 }
 
 void LinkContext::StartKeepAliveTimer(const Timestamp& expiration)
 {
-    this->keepAliveTimer = executor->start(expiration.value, [this]() { this->OnKeepAliveTimeout(); });
+    this->keepAliveTimer = executor->start(expiration.value, [this,t{timer_tracker}]()
+	  {
+		if(isOnline)
+		    this->OnKeepAliveTimeout();
+	  });
 }
 
 void LinkContext::CancelTimer()

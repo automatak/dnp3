@@ -62,6 +62,8 @@ public:
                 ILinkSession& session,
                 const LinkLayerConfig&);
 
+    ~LinkContext();
+
     // ---- helpers for dealing with the FCB bits ----
 
     void ResetReadFCB()
@@ -135,6 +137,9 @@ public:
     const std::shared_ptr<IUpperLayer> upper;
 
     ILinkSession* pSession;
+
+private:
+    std::shared_ptr<void> timer_tracker = std::make_shared<char>();
 };
 
 } // namespace opendnp3
